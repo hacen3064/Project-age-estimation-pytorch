@@ -63,6 +63,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device):
             x = x.to(device)
             y = y.to(device)
 
+            y = y.type(torch.LongTensor)
             # compute output
             outputs = model(x)
 
@@ -103,6 +104,7 @@ def validate(validate_loader, model, criterion, epoch, device):
                 x = x.to(device)
                 y = y.to(device)
 
+                y = y.type(torch.LongTensor)
                 # compute output
                 outputs = model(x)
                 preds.append(F.softmax(outputs, dim=-1).cpu().numpy())
