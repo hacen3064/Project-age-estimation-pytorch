@@ -62,6 +62,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device):
             x = x.to(device)
             y = y.to(device)
 
+            y = y.type(torch.LongTensor)
             # compute output
             outputs = model(x)
             classes = torch.arange(0, 101).type(torch.FloatTensor)
@@ -103,6 +104,7 @@ def validate(validate_loader, model, criterion, epoch, device):
                 x = x.to(device)
                 y = y.to(device)
 
+                y = y.type(torch.LongTensor)
                 # compute output
                 outputs = model(x)
                 classes = torch.arange(0, 101).type(torch.FloatTensor)
