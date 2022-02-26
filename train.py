@@ -1,5 +1,4 @@
 import argparse
-import better_exceptions
 from pathlib import Path
 from collections import OrderedDict
 from tqdm import tqdm
@@ -65,13 +64,14 @@ def train(train_loader, model, criterion, optimizer, epoch, device):
 
             # compute output
             outputs = model(x)
-
+            classes = torch.arange(0, 101).type(torch.FloatTensor)
+            outputs = F.softmax(outputs, dim=1)@classes
             # calc loss
             loss = criterion(outputs, y)
             cur_loss = loss.item()
 
             # calc accuracy
-            _, predicted = outputs.max(1)
+            predicted = outputs
             correct_num = predicted.eq(y).sum().item()
 
             # measure accuracy and record loss
@@ -105,7 +105,9 @@ def validate(validate_loader, model, criterion, epoch, device):
 
                 # compute output
                 outputs = model(x)
-                preds.append(F.softmax(outputs, dim=-1).cpu().numpy())
+                classes = torch.arange(0, 101).type(torch.FloatTensor)
+                outputs = F.softmax(outputs, dim=1)@classes
+                preds.append(outputs.cpu().numpy())
                 gt.append(y.cpu().numpy())
 
                 # valid for validation, not used for test
@@ -115,7 +117,7 @@ def validate(validate_loader, model, criterion, epoch, device):
                     cur_loss = loss.item()
 
                     # calc accuracy
-                    _, predicted = outputs.max(1)
+                    predicted = outputs
                     correct_num = predicted.eq(y).sum().item()
 
                     # measure accuracy and record loss
@@ -127,9 +129,9 @@ def validate(validate_loader, model, criterion, epoch, device):
 
     preds = np.concatenate(preds, axis=0)
     gt = np.concatenate(gt, axis=0)
-    ages = np.arange(0, 101)
-    ave_preds = (preds * ages).sum(axis=-1)
-    diff = ave_preds - gt
+    #ages = np.arange(0, 101)
+    #ave_preds = (preds * ages).sum(axis=-1)
+    diff = preds - gt
     mae = np.abs(diff).mean()
 
     return loss_monitor.avg, accuracy_monitor.avg, mae

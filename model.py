@@ -1,6 +1,7 @@
 import torch.nn as nn
 import pretrainedmodels
 import pretrainedmodels.utils
+from torchvision.models.vgg import vgg16_bn
 
 
 def get_model(model_name="se_resnext50_32x4d", num_classes=101, pretrained="imagenet"):
@@ -8,6 +9,13 @@ def get_model(model_name="se_resnext50_32x4d", num_classes=101, pretrained="imag
     dim_feats = model.last_linear.in_features
     model.last_linear = nn.Linear(dim_feats, num_classes)
     model.avg_pool = nn.AdaptiveAvgPool2d(1)
+    return model
+
+def get_vgg():
+    
+    model = vgg16_bn(pretrained=True)
+    dim_feats = model.classifier[6].in_features
+    model.classifier[6] = nn.Linear(dim_feats, 101)
     return model
 
 
