@@ -58,9 +58,11 @@ def train(train_loader, model, criterion, optimizer, epoch, device):
     accuracy_monitor = AverageMeter()
 
     with tqdm(train_loader) as _tqdm:
-        for x, y in _tqdm:
+        for x, y, gender, race in _tqdm:
             x = x.to(device)
             y = y.to(device)
+            gender = gender.to(device)
+            race = race.to(device)
 
             y = y.type(torch.LongTensor)
             # compute output
