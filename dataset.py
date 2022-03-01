@@ -80,8 +80,8 @@ class FaceDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.x[idx]
         age = self.y[idx]
-        gender = np.identity(2)[self.gender_encoder[self.gender[idx]] ]
-        race = np.identity(3)[self.race_encoder[self.race[idx]] ]
+        gender = self.gender_encoder[self.gender[idx]] 
+        race = self.race_encoder[self.race[idx]] 
 
         if self.augment:
             age += np.random.randn() * self.std[idx] * self.age_stddev

@@ -52,7 +52,7 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def train(train_loader, model, criterion, optimizer, epoch, device):
+def train(train_loader, model, criterion, optimizer, epoch, device, alpha = 1, beta = 0.2, gamma=0.2):
     model.train()
     loss_monitor = AverageMeter()
     accuracy_monitor = AverageMeter()
@@ -66,15 +66,21 @@ def train(train_loader, model, criterion, optimizer, epoch, device):
 
             y = y.type(torch.LongTensor)
             # compute output
-            outputs = model(x)
+            age_preds, gender_preds, race_preds = model(x)
             classes = torch.arange(0, 101).type(torch.FloatTensor)
-            outputs = F.softmax(outputs, dim=1)@classes
+            predicted_age = F.softmax(age_preds, dim=1)@classes
+
+
             # calc loss
-            loss = criterion(outputs, y)
+            loss_age = criterion(predicted_age, y)
+            loss_gender = nn.CrossEntropyLoss().to(device)(gender_preds, gender)
+            loss_race = nn.CrossEntropyLoss().to(device)(race_preds, race)
+
+            loss = alpha*loss_age + beta*loss_gender + gamma*loss_race 
             cur_loss = loss.item()
 
             # calc accuracy
-            predicted = outputs
+            predicted = predicted_age
             correct_num = predicted.eq(y).sum().item()
 
             # measure accuracy and record loss
@@ -93,7 +99,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device):
     return loss_monitor.avg, accuracy_monitor.avg
 
 
-def validate(validate_loader, model, criterion, epoch, device):
+def validate(validate_loader, model, criterion, epoch, device, alpha = 1, beta = 0.2, gamma=0.2):
     model.eval()
     loss_monitor = AverageMeter()
     accuracy_monitor = AverageMeter()
@@ -102,26 +108,33 @@ def validate(validate_loader, model, criterion, epoch, device):
 
     with torch.no_grad():
         with tqdm(validate_loader) as _tqdm:
-            for i, (x, y) in enumerate(_tqdm):
+            for i, (x, y, gender, race) in enumerate(_tqdm):
                 x = x.to(device)
                 y = y.to(device)
+                gender = gender.to(device)
+                race = race.to(device)
 
                 y = y.type(torch.LongTensor)
                 # compute output
-                outputs = model(x)
+                age_preds, gender_preds, race_preds = model(x)
                 classes = torch.arange(0, 101).type(torch.FloatTensor)
-                outputs = F.softmax(outputs, dim=1)@classes
-                preds.append(outputs.cpu().numpy())
+                predicted_age = F.softmax(age_preds, dim=1)@classes
+
+                preds.append(predicted_age.cpu().numpy())
                 gt.append(y.cpu().numpy())
 
                 # valid for validation, not used for test
                 if criterion is not None:
                     # calc loss
-                    loss = criterion(outputs, y)
+                    loss_age = criterion(predicted_age, y)
+                    loss_gender = nn.CrossEntropyLoss().to(device)(gender_preds, gender)
+                    loss_race = nn.CrossEntropyLoss().to(device)(race_preds, race)
+
+                    loss = alpha*loss_age + beta*loss_gender + gamma*loss_race 
                     cur_loss = loss.item()
 
                     # calc accuracy
-                    predicted = outputs
+                    predicted = predicted_age
                     correct_num = predicted.eq(y).sum().item()
 
                     # measure accuracy and record loss
