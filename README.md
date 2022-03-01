@@ -8,6 +8,7 @@
 - test generalization of a model trained on [APPA-REAL](https://data.vision.ee.ethz.ch/cvl/rrothe/imdb-wiki/) for other datasets (check this [paper](https://openaccess.thecvf.com/content_cvpr_2018_workshops/papers/w48/Clapes_From_Apparent_to_CVPR_2018_paper.pdf) for references on other datasets). Can you think of some ways of cheap domain adaptation, e.g. leveraging BatchNorm layers?
 - train model with Dropout layers and use MC-Dropout for uncertainty estimation at runtime [[ref](https://arxiv.org/abs/1506.02142)]
 - add additional synthetic data from a GAN, e.g., [StyleGAN](https://github.com/NVlabs/stylegan3), and annotate it with predictions from model trained on real data. What happens if you train only on synthetic data? What if you mix the two training datasets?
+- improve performence with Test-Time-Augmentation ensembling [[ref](https://arxiv.org/abs/2011.11156)]
 
 ---------------
 
