@@ -32,9 +32,13 @@ class ImgAugTransform:
 
 
 class FaceDataset(Dataset):
+
+    race_encoder =  {'afroamerican' : 0 , 'asian' : 1, 'caucasian' : 2}
+    gender_encoder = {'male': 0, 'female': 1}
     def __init__(self, data_dir, data_type, img_size=224, augment=False, age_stddev=1.0):
         assert(data_type in ("train", "valid", "test"))
         csv_path = Path(data_dir).joinpath(f"gt_avg_{data_type}.csv")
+        extended_labels_path = Path(data_dir).joinpath(f"allcategories_{data_type}.csv")
         img_dir = Path(data_dir).joinpath(data_type)
         self.img_size = img_size
         self.augment = augment
@@ -48,12 +52,16 @@ class FaceDataset(Dataset):
         self.x = []
         self.y = []
         self.std = []
+        self.gender = []
+        self.race = []
         df = pd.read_csv(str(csv_path))
+        df_extended = pd.read_csv(str(extended_labels_path), index_col=0)
         ignore_path = Path(__file__).resolve().parent.joinpath("ignore_list.csv")
         ignore_img_names = list(pd.read_csv(str(ignore_path))["img_name"].values)
 
         for _, row in df.iterrows():
             img_name = row["file_name"]
+            row_extended = df_extended.loc[img_name]
 
             if img_name in ignore_img_names:
                 continue
@@ -63,6 +71,8 @@ class FaceDataset(Dataset):
             self.x.append(str(img_path))
             self.y.append(row["apparent_age_avg"])
             self.std.append(row["apparent_age_std"])
+            self.gender.append(row_extended['gender'])
+            self.race.append(row_extended['race'])
 
     def __len__(self):
         return len(self.y)
@@ -70,6 +80,8 @@ class FaceDataset(Dataset):
     def __getitem__(self, idx):
         img_path = self.x[idx]
         age = self.y[idx]
+        gender = encoder[self.gender[idx]]
+        race = self.race[idx]
 
         if self.augment:
             age += np.random.randn() * self.std[idx] * self.age_stddev
