@@ -48,6 +48,10 @@ class FaceDataset(Dataset):
         self.x = []
         self.y = []
         self.std = []
+        # Ajouter les ages réels (1)
+        self.real = []
+        # Ajouter les résidus (2)
+        #self.residual = []
         df = pd.read_csv(str(csv_path))
         ignore_path = Path(__file__).resolve().parent.joinpath("ignore_list.csv")
         ignore_img_names = list(pd.read_csv(str(ignore_path))["img_name"].values)
@@ -55,14 +59,17 @@ class FaceDataset(Dataset):
         for _, row in df.iterrows():
             img_name = row["file_name"]
 
-            if img_name in ignore_img_names:
-                continue
+            #if img_name in ignore_img_names:
+                #continue
 
             img_path = img_dir.joinpath(img_name + "_face.jpg")
             assert(img_path.is_file())
             self.x.append(str(img_path))
             self.y.append(row["apparent_age_avg"])
             self.std.append(row["apparent_age_std"])
+
+            self.real.append(row["real_age"]) #(1)
+            #self.residual.append(row["residual"]) #(1)
 
     def __len__(self):
         return len(self.y)
@@ -71,13 +78,15 @@ class FaceDataset(Dataset):
         img_path = self.x[idx]
         age = self.y[idx]
 
+        age_real = self.real[idx]
+
         if self.augment:
             age += np.random.randn() * self.std[idx] * self.age_stddev
 
         img = cv2.imread(str(img_path), 1)
         img = cv2.resize(img, (self.img_size, self.img_size))
         img = self.transform(img).astype(np.float32)
-        return torch.from_numpy(np.transpose(img, (2, 0, 1))), np.clip(round(age), 0, 100)
+        return torch.from_numpy(np.transpose(img, (2, 0, 1))), np.clip(round(age), 0, 100), np.clip(round(age_real), 0, 100)
 
 
 def main():

@@ -60,12 +60,11 @@ def train(train_loader, model, criterion, optimizer, epoch, device):
     with tqdm(train_loader) as _tqdm:
         for x, y in _tqdm:
             x = x.to(device)
-            y = y.to(device)
+            y = y.type(torch.LongTensor).to(device)
 
-            y = y.type(torch.LongTensor)
             # compute output
             outputs = model(x)
-            classes = torch.arange(0, 101).type(torch.FloatTensor)
+            classes = torch.arange(0, 101).type(torch.FloatTensor).to(device)
             outputs = F.softmax(outputs, dim=1)@classes
             # calc loss
             loss = criterion(outputs, y)
@@ -102,13 +101,11 @@ def validate(validate_loader, model, criterion, epoch, device):
         with tqdm(validate_loader) as _tqdm:
             for i, (x, y) in enumerate(_tqdm):
                 x = x.to(device)
-                y = y.to(device)
-
-                y = y.type(torch.LongTensor)
+                y = y.type(torch.LongTensor).to(device)
                 # compute output
                 outputs = model(x)
-                classes = torch.arange(0, 101).type(torch.FloatTensor)
-                outputs = F.softmax(outputs, dim=1)@classes
+                classes = torch.arange(0, 101).type(torch.FloatTensor).to(device)
+                outputs = F.softmax(outputs, dim=1)@classes.to(device)
                 preds.append(outputs.cpu().numpy())
                 gt.append(y.cpu().numpy())
 
