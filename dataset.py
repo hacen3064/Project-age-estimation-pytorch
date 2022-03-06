@@ -32,9 +32,14 @@ class ImgAugTransform:
 
 
 class FaceDataset(Dataset):
-    def __init__(self, data_dir, data_type, img_size=224, augment=False, age_stddev=1.0):
+    def __init__(self, data_dir, data_type, img_size=224, augment=False, age_stddev=1.0, is_res=False):
         assert(data_type in ("train", "valid", "test"))
-        csv_path = Path(data_dir).joinpath(f"gt_avg_{data_type}.csv")
+
+        if is_res : 
+            csv_path = Path(data_dir).joinpath(f"gt_avg_{data_type}_res.csv")
+        else :
+            csv_path = Path(data_dir).joinpath(f"gt_avg_{data_type}.csv")
+
         img_dir = Path(data_dir).joinpath(data_type)
         self.img_size = img_size
         self.augment = augment
@@ -50,8 +55,11 @@ class FaceDataset(Dataset):
         self.std = []
         # Ajouter les ages réels (1)
         self.real = []
-        # Ajouter les résidus (2)
-        #self.residual = []
+
+        if is_res : 
+            # Ajouter les résidus (2)
+            self.residual = []
+
         df = pd.read_csv(str(csv_path))
         ignore_path = Path(__file__).resolve().parent.joinpath("ignore_list.csv")
         ignore_img_names = list(pd.read_csv(str(ignore_path))["img_name"].values)
@@ -69,7 +77,9 @@ class FaceDataset(Dataset):
             self.std.append(row["apparent_age_std"])
 
             self.real.append(row["real_age"]) #(1)
-            #self.residual.append(row["residual"]) #(1)
+
+            if is_res : 
+                self.residual.append(row["residual"]) #(1)
 
     def __len__(self):
         return len(self.y)

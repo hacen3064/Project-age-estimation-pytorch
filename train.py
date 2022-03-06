@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 from collections import OrderedDict
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 import numpy as np
 import torch
 import torch.nn as nn
@@ -52,19 +52,19 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def train(train_loader, model, criterion, optimizer, epoch, device):
+def train(train_loader, model, criterion, optimizer, epoch, device, classes):
     model.train()
     loss_monitor = AverageMeter()
     accuracy_monitor = AverageMeter()
 
     with tqdm(train_loader) as _tqdm:
-        for x, y in _tqdm:
+        for x, y, _ in _tqdm:
             x = x.to(device)
             y = y.type(torch.LongTensor).to(device)
 
             # compute output
             outputs = model(x)
-            classes = torch.arange(0, 101).type(torch.FloatTensor).to(device)
+            classes = classes.to(device)
             outputs = F.softmax(outputs, dim=1)@classes
             # calc loss
             loss = criterion(outputs, y)
@@ -90,7 +90,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device):
     return loss_monitor.avg, accuracy_monitor.avg
 
 
-def validate(validate_loader, model, criterion, epoch, device):
+def validate(validate_loader, model, criterion, epoch, device, classes):
     model.eval()
     loss_monitor = AverageMeter()
     accuracy_monitor = AverageMeter()
@@ -99,12 +99,12 @@ def validate(validate_loader, model, criterion, epoch, device):
 
     with torch.no_grad():
         with tqdm(validate_loader) as _tqdm:
-            for i, (x, y) in enumerate(_tqdm):
+            for i, (x, y, _) in enumerate(_tqdm):
                 x = x.to(device)
                 y = y.type(torch.LongTensor).to(device)
                 # compute output
                 outputs = model(x)
-                classes = torch.arange(0, 101).type(torch.FloatTensor).to(device)
+                classes = classes.to(device)
                 outputs = F.softmax(outputs, dim=1)@classes.to(device)
                 preds.append(outputs.cpu().numpy())
                 gt.append(y.cpu().numpy())
