@@ -1,8 +1,8 @@
 import torch.nn as nn
 import pretrainedmodels
 import pretrainedmodels.utils
-from torchvision.models.vgg import vgg16_bn
-import torchvision.models as models
+#from torchvision.models.vgg import vgg16_bn
+#import torchvision.models as models
 
 
 def get_model(model_name="se_resnext50_32x4d", num_classes=101, pretrained="imagenet"):

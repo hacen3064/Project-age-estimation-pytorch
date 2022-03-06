@@ -149,13 +149,13 @@ class FaceDataset_UTK(Dataset):
         #gender = self.gender_encoder[self.gender[idx]] 
         #race = self.race_encoder[self.race[idx]] 
 
-        if self.augment:
-            age += np.random.randn() * self.std[idx] * self.age_stddev
+        #if self.augment:
+            #age += np.random.randn() * self.std[idx] * self.age_stddev
 
         img = cv2.imread(str(img_path), 1)
         img = cv2.resize(img, (self.img_size, self.img_size))
         img = self.transform(img).astype(np.float32)
-        return torch.from_numpy(np.transpose(img, (2, 0, 1))), np.clip(round(age), 0, 100)
+        return torch.from_numpy(np.transpose(img, (2, 0, 1))), np.clip(round(age), 0, 100), 0 # 4e 0 bal6a !!
 
 
 def main():
