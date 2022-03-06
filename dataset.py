@@ -99,6 +99,65 @@ class FaceDataset(Dataset):
         return torch.from_numpy(np.transpose(img, (2, 0, 1))), np.clip(round(age), 0, 100), np.clip(round(age_real), 0, 100)
 
 
+
+class FaceDataset_UTK(Dataset):
+
+    race_encoder =  {'afroamerican' : 0 , 'asian' : 1, 'caucasian' : 2}
+    gender_encoder = {'male': 0, 'female': 1}
+    def __init__(self, data_dir, data_type, img_size=224, augment=False, age_stddev=1.0):
+        assert(data_type in ("train", "valid", "test"))
+        csv_path = Path(data_dir).joinpath(f"UTKFace.csv")
+        extended_labels_path = Path(data_dir).joinpath(f"UTKFace.csv")
+        img_dir = Path(data_dir).joinpath("UTKFace")
+        self.img_size = img_size
+        self.augment = augment
+        self.age_stddev = age_stddev
+
+        if augment:
+            self.transform = ImgAugTransform()
+        else:
+            self.transform = lambda i: i
+
+        self.x = []
+        self.y = []
+        #self.std = []
+        #self.gender = []
+        #self.race = []
+        df = pd.read_csv(str(csv_path))
+        #df_extended = pd.read_csv(str(extended_labels_path), index_col=0)
+        #ignore_path = Path(__file__).resolve().parent.joinpath("ignore_list.csv")
+        #ignore_img_names = list(pd.read_csv(str(ignore_path))["img_name"].values)
+
+        for _, row in df.iterrows():
+            img_name = row["img_dir"]
+            #row_extended = df_extended.loc[img_name]
+
+            #if img_name in ignore_img_names:
+            #    continue
+
+            img_path = img_dir.joinpath(img_name)
+            assert(img_path.is_file())
+            self.x.append(str(img_path))
+            self.y.append(row["age"])
+
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self, idx):
+        img_path = self.x[idx]
+        age = self.y[idx]
+        #gender = self.gender_encoder[self.gender[idx]] 
+        #race = self.race_encoder[self.race[idx]] 
+
+        if self.augment:
+            age += np.random.randn() * self.std[idx] * self.age_stddev
+
+        img = cv2.imread(str(img_path), 1)
+        img = cv2.resize(img, (self.img_size, self.img_size))
+        img = self.transform(img).astype(np.float32)
+        return torch.from_numpy(np.transpose(img, (2, 0, 1))), np.clip(round(age), 0, 100)
+
+
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--data_dir", type=str, required=True)
