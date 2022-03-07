@@ -1,4 +1,7 @@
 appa-real-release
-checkpoint
 t_log
 data_UTK
+checkpoint
+checkpoint_2
+*.pyc
+*.csv
