@@ -1,8 +1,7 @@
 import torch.nn as nn
 import pretrainedmodels
 import pretrainedmodels.utils
-#from torchvision.models.vgg import vgg16_bn
-#import torchvision.models as models
+import torchvision.models as models
 
 
 def get_model(model_name="se_resnext50_32x4d", num_classes=101, pretrained="imagenet"):
@@ -12,18 +11,12 @@ def get_model(model_name="se_resnext50_32x4d", num_classes=101, pretrained="imag
     model.avg_pool = nn.AdaptiveAvgPool2d(1)
     return model
 
-def get_vgg():
-    
-    model = models.resnet18(pretrained=True)
-    dim_feats = model.classifier[6].in_features
-    model.classifier[6] = nn.Linear(dim_feats, 101)
-    return model
-
 def get_resnet():
     
-    model = models.resnet18(pretrained=True)
-    dim_feats = model.classifier[6].in_features
-    model.classifier[6] = nn.Linear(dim_feats, 101)
+    model = models.resnet50(pretrained=True)
+    dim_feats = model.fc.in_features
+    model.fc = nn.Linear(dim_feats, 101)
+    model.avgpool = nn.AdaptiveAvgPool2d(1)
     return model
 
 

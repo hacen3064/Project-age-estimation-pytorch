@@ -58,7 +58,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device, classes):
     accuracy_monitor = AverageMeter()
 
     with tqdm(train_loader) as _tqdm:
-        for x, y, _ in _tqdm:
+        for i, (x, y, _) in enumerate(_tqdm):
             x = x.to(device)
             y = y.type(torch.LongTensor).to(device)
 
@@ -80,9 +80,12 @@ def train(train_loader, model, criterion, optimizer, epoch, device, classes):
             accuracy_monitor.update(correct_num, sample_num)
 
             # compute gradient and do SGD step
-            optimizer.zero_grad()
             loss.backward()
-            optimizer.step()
+            
+
+            if i % 10 == 1:
+                optimizer.step()
+                optimizer.zero_grad()
 
             _tqdm.set_postfix(OrderedDict(stage="train", epoch=epoch, loss=loss_monitor.avg),
                               acc=accuracy_monitor.avg, correct=correct_num, sample_num=sample_num)
@@ -104,6 +107,55 @@ def validate(validate_loader, model, criterion, epoch, device, classes):
                 y = y.type(torch.LongTensor).to(device)
                 # compute output
                 outputs = model(x)
+                classes = classes.to(device)
+                outputs = F.softmax(outputs, dim=1)@classes.to(device)
+                preds.append(outputs.cpu().numpy())
+                gt.append(y.cpu().numpy())
+
+                # valid for validation, not used for test
+                if criterion is not None:
+                    # calc loss
+                    loss = criterion(outputs, y)
+                    cur_loss = loss.item()
+
+                    # calc accuracy
+                    predicted = outputs
+                    correct_num = predicted.eq(y).sum().item()
+
+                    # measure accuracy and record loss
+                    sample_num = x.size(0)
+                    loss_monitor.update(cur_loss, sample_num)
+                    accuracy_monitor.update(correct_num, sample_num)
+                    _tqdm.set_postfix(OrderedDict(stage="val", epoch=epoch, loss=loss_monitor.avg),
+                                      acc=accuracy_monitor.avg, correct=correct_num, sample_num=sample_num)
+
+    preds = np.concatenate(preds, axis=0)
+    gt = np.concatenate(gt, axis=0)
+    #ages = np.arange(0, 101)
+    #ave_preds = (preds * ages).sum(axis=-1)
+    diff = preds - gt
+    mae = np.abs(diff).mean()
+
+    return loss_monitor.avg, accuracy_monitor.avg, mae
+
+
+
+
+def test(validate_loader, model_1, model_2, criterion, epoch, device, classes):
+    model_1.eval()
+    model_2.eval()
+    loss_monitor = AverageMeter()
+    accuracy_monitor = AverageMeter()
+    preds = []
+    gt = []
+
+    with torch.no_grad():
+        with tqdm(validate_loader) as _tqdm:
+            for i, (x, _, age_real) in enumerate(_tqdm):
+                x = x.to(device)
+                y = age_real.type(torch.LongTensor).to(device)
+                # compute output
+                outputs = model_1(x) + model_2(x)
                 classes = classes.to(device)
                 outputs = F.softmax(outputs, dim=1)@classes.to(device)
                 preds.append(outputs.cpu().numpy())
