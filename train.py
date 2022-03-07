@@ -83,7 +83,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device, classes):
             loss.backward()
             
 
-            if i % 10 == 1:
+            if i % 15 == 1:
                 optimizer.step()
                 optimizer.zero_grad()
 
