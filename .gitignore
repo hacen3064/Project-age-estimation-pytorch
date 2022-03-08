@@ -1,3 +1,9 @@
 appa-real-release
 checkpoint
 t_log
+tensorbord
+_train
+_val
+.ipynb_checkpoints
+__pycache__
+params.txt

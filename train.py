@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 from collections import OrderedDict
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 import numpy as np
 import torch
 import torch.nn as nn
@@ -52,91 +52,111 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def train(train_loader, model, criterion, optimizer, epoch, device):
+def train(train_loader, model, criterion, optimizer, epoch, device, alpha = 1, beta = 0.2, gamma=0.2, gr_acc=1):
     model.train()
     loss_monitor = AverageMeter()
-    accuracy_monitor = AverageMeter()
+    loss_age_monitor = AverageMeter()
+    loss_race_monitor = AverageMeter()
+    loss_gender_monitor = AverageMeter()
 
+
+    gradient_accumulation = 3
     with tqdm(train_loader) as _tqdm:
-        for x, y in _tqdm:
+        for i, (x, y, gender, race) in enumerate(_tqdm):
             x = x.to(device)
-            y = y.to(device)
+            y = y.type(torch.LongTensor).to(device)
+            gender = gender.to(device)
+            race = race.to(device)
 
-            y = y.type(torch.LongTensor)
             # compute output
-            outputs = model(x)
-            classes = torch.arange(0, 101).type(torch.FloatTensor)
-            outputs = F.softmax(outputs, dim=1)@classes
-            # calc loss
-            loss = criterion(outputs, y)
-            cur_loss = loss.item()
+            age_preds, gender_preds, race_preds = model(x)
+            classes = torch.arange(0, 101).type(torch.FloatTensor).to(device)
+            predicted_age = F.softmax(age_preds, dim=1)@classes
 
-            # calc accuracy
-            predicted = outputs
-            correct_num = predicted.eq(y).sum().item()
+
+            # calc loss
+            loss_age = criterion(predicted_age, y)
+            loss_gender = nn.CrossEntropyLoss().to(device)(gender_preds, gender)
+            loss_race = nn.CrossEntropyLoss().to(device)(race_preds, race)
+
+            loss = (alpha*loss_age + beta*loss_gender + gamma*loss_race) 
+            cur_loss = loss.item()
 
             # measure accuracy and record loss
             sample_num = x.size(0)
-            loss_monitor.update(cur_loss, sample_num)
-            accuracy_monitor.update(correct_num, sample_num)
+            loss_monitor.update(sample_num*cur_loss, sample_num)
+            loss_age_monitor.update(sample_num*loss_age.item(), sample_num)
+            loss_race_monitor.update(sample_num*loss_race.item(), sample_num)
+            loss_gender_monitor.update(sample_num*loss_gender.item(), sample_num)
 
             # compute gradient and do SGD step
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            _tqdm.set_postfix(OrderedDict(stage="train", epoch=epoch, loss=loss_monitor.avg),
-                              acc=accuracy_monitor.avg, correct=correct_num, sample_num=sample_num)
-
-    return loss_monitor.avg, accuracy_monitor.avg
+            (loss/gr_acc).backward()
+            if (i+1)%gr_acc == 0:
+                optimizer.step()
+                optimizer.zero_grad()
 
 
-def validate(validate_loader, model, criterion, epoch, device):
+            _tqdm.set_postfix(OrderedDict( stage="train", epoch=epoch, loss=loss_monitor.avg, 
+                                        loss_age=loss_age_monitor.avg, loss_race=loss_race_monitor.avg,
+                                        loss_gender=loss_gender_monitor.avg))
+
+    return loss_monitor.avg, loss_age_monitor.avg
+
+
+def validate(validate_loader, model, criterion, epoch, device, alpha = 1, beta = 0.2, gamma=0.2):
     model.eval()
     loss_monitor = AverageMeter()
-    accuracy_monitor = AverageMeter()
+    loss_age_monitor = AverageMeter()
+    loss_race_monitor = AverageMeter()
+    loss_gender_monitor = AverageMeter()
+
     preds = []
     gt = []
 
     with torch.no_grad():
         with tqdm(validate_loader) as _tqdm:
-            for i, (x, y) in enumerate(_tqdm):
+            for i, (x, y, gender, race) in enumerate(_tqdm):
                 x = x.to(device)
-                y = y.to(device)
+                y = y.type(torch.LongTensor).to(device)
+                gender = gender.to(device)
+                race = race.to(device)
 
-                y = y.type(torch.LongTensor)
                 # compute output
-                outputs = model(x)
-                classes = torch.arange(0, 101).type(torch.FloatTensor)
-                outputs = F.softmax(outputs, dim=1)@classes
-                preds.append(outputs.cpu().numpy())
+                age_preds, gender_preds, race_preds = model(x)
+                classes = torch.arange(0, 101).type(torch.FloatTensor).to(device)
+                predicted_age = F.softmax(age_preds, dim=1)@classes
+
+                preds.append(predicted_age.cpu().numpy())
                 gt.append(y.cpu().numpy())
 
                 # valid for validation, not used for test
                 if criterion is not None:
                     # calc loss
-                    loss = criterion(outputs, y)
-                    cur_loss = loss.item()
+                    loss_age = criterion(predicted_age, y)
+                    loss_gender = nn.CrossEntropyLoss().to(device)(gender_preds, gender)
+                    loss_race = nn.CrossEntropyLoss().to(device)(race_preds, race)
 
-                    # calc accuracy
-                    predicted = outputs
-                    correct_num = predicted.eq(y).sum().item()
+                    loss = (alpha*loss_age + beta*loss_gender + gamma*loss_race) 
+                    cur_loss = loss.item()
 
                     # measure accuracy and record loss
                     sample_num = x.size(0)
-                    loss_monitor.update(cur_loss, sample_num)
-                    accuracy_monitor.update(correct_num, sample_num)
-                    _tqdm.set_postfix(OrderedDict(stage="val", epoch=epoch, loss=loss_monitor.avg),
-                                      acc=accuracy_monitor.avg, correct=correct_num, sample_num=sample_num)
+                    loss_monitor.update(sample_num*cur_loss, sample_num)
+                    loss_age_monitor.update(sample_num*loss_age.item(), sample_num)
+                    loss_race_monitor.update(sample_num*loss_race.item(), sample_num)
+                    loss_gender_monitor.update(sample_num*loss_gender.item(), sample_num)
+
+
+                    _tqdm.set_postfix(OrderedDict( stage="val", epoch=epoch, loss=loss_monitor.avg, 
+                                                   loss_age=loss_age_monitor.avg, loss_race=loss_race_monitor.avg, 
+                                                   loss_gender=loss_gender_monitor.avg))
 
     preds = np.concatenate(preds, axis=0)
     gt = np.concatenate(gt, axis=0)
-    #ages = np.arange(0, 101)
-    #ave_preds = (preds * ages).sum(axis=-1)
     diff = preds - gt
     mae = np.abs(diff).mean()
 
-    return loss_monitor.avg, accuracy_monitor.avg, mae
+    return gt, preds, loss_monitor.avg, mae
 
 
 def main():
