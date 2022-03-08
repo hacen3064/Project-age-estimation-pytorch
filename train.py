@@ -83,7 +83,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device, classes):
             loss.backward()
             
 
-            if i % 15 == 1:
+            if i % 7 == 1:
                 optimizer.step()
                 optimizer.zero_grad()
 
@@ -141,9 +141,11 @@ def validate(validate_loader, model, criterion, epoch, device, classes):
 
 
 
-def test(validate_loader, model_1, model_2, criterion, epoch, device, classes):
+def test(validate_loader, model_1, model_2, criterion, epoch, device):
     model_1.eval()
     model_2.eval()
+    classes_1 = torch.arange(0, 101).type(torch.FloatTensor).to(device)
+    classes_2 = torch.arange(-50, 51).type(torch.FloatTensor).to(device)
     loss_monitor = AverageMeter()
     accuracy_monitor = AverageMeter()
     preds = []
@@ -151,13 +153,15 @@ def test(validate_loader, model_1, model_2, criterion, epoch, device, classes):
 
     with torch.no_grad():
         with tqdm(validate_loader) as _tqdm:
-            for i, (x, _, age_real) in enumerate(_tqdm):
+            for i, (x, age_apparent, age_real) in enumerate(_tqdm):
                 x = x.to(device)
-                y = age_real.type(torch.LongTensor).to(device)
+                y = age_apparent.type(torch.LongTensor).to(device)
                 # compute output
-                outputs = model_1(x) + model_2(x)
-                classes = classes.to(device)
-                outputs = F.softmax(outputs, dim=1)@classes.to(device)
+                outputs_1 = model_1(x)
+                outputs_1 = F.softmax(outputs_1, dim=1)@classes_1
+                outputs_2 = model_2(x)
+                outputs_2 = F.softmax(outputs_2, dim=1)@classes_2
+                outputs = outputs_1 + outputs_2
                 preds.append(outputs.cpu().numpy())
                 gt.append(y.cpu().numpy())
 
