@@ -13,7 +13,7 @@ class ImgAugTransform:
         self.aug = iaa.Sequential([
             iaa.OneOf([
                 iaa.Sometimes(0.25, iaa.AdditiveGaussianNoise(scale=0.1 * 255)),
-                iaa.Sometimes(0.25, iaa.GaussianBlur(sigma=(0, 3.0)))
+                iaa.Sometimes(0.25, iaa.GaussianBlur(sigma=(0, 2.0)))
                 ]),
             iaa.Affine(
                 rotate=(-20, 20), mode="edge",
@@ -74,10 +74,16 @@ class FaceDataset(Dataset):
             self.gender.append(row_extended['gender'])
             self.race.append(row_extended['race'])
 
+       
+
+
     def __len__(self):
         return len(self.y)
 
     def __getitem__(self, idx):
+
+        # set the augmentation for half imgs  
+        #self.augment = idx%2 == 0
         img_path = self.x[idx]
         age = self.y[idx]
         gender = self.gender_encoder[self.gender[idx]] 
