@@ -52,7 +52,10 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def train(train_loader, model, criterion, optimizer, epoch, device, alpha = 1, beta = 0.2, gamma=0.2, gr_acc=1):
+def train(train_loader, model, criterion, optimizer, epoch, 
+         device, alpha = 1, beta = 0.2, gamma=0.2, gr_acc=1, 
+         classes = torch.arange(0, 101) ):
+         
     model.train()
     loss_monitor = AverageMeter()
     loss_age_monitor = AverageMeter()
@@ -70,7 +73,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device, alpha = 1, b
 
             # compute output
             age_preds, gender_preds, race_preds = model(x)
-            classes = torch.arange(0, 101).type(torch.FloatTensor).to(device)
+            classes = classes.type(torch.FloatTensor).to(device)
             predicted_age = F.softmax(age_preds, dim=1)@classes
 
 
@@ -103,7 +106,10 @@ def train(train_loader, model, criterion, optimizer, epoch, device, alpha = 1, b
     return loss_monitor.avg, loss_age_monitor.avg
 
 
-def validate(validate_loader, model, criterion, epoch, device, alpha = 1, beta = 0.2, gamma=0.2):
+def validate(validate_loader, model, criterion, epoch, 
+         device, alpha = 1, beta = 0.2, gamma=0.2, 
+         classes = torch.arange(0, 101) ):  
+
     model.eval()
     loss_monitor = AverageMeter()
     loss_age_monitor = AverageMeter()
@@ -123,7 +129,7 @@ def validate(validate_loader, model, criterion, epoch, device, alpha = 1, beta =
 
                 # compute output
                 age_preds, gender_preds, race_preds = model(x)
-                classes = torch.arange(0, 101).type(torch.FloatTensor).to(device)
+                classes = classes.type(torch.FloatTensor).to(device)
                 predicted_age = F.softmax(age_preds, dim=1)@classes
 
                 preds.append(predicted_age.cpu().numpy())
